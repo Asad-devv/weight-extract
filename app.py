@@ -11,7 +11,7 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 import google.generativeai as genai
 
 # 🔑 Gemini API Key (Secure way for Streamlit sharing)
-genai.configure(api_key=st.secrets["AIzaSyD3T59ddtKIWiGRun31oCbdzba3ibm-He4"])  # Or use st.text_input for local testing
+genai.configure(api_key="AIzaSyD3T59ddtKIWiGRun31oCbdzba3ibm-He4")  # Or use st.text_input for local testing
 
 # ✅ Clean output
 def clean_text(text):
