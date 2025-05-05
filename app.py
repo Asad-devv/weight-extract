@@ -24,45 +24,50 @@ def detect_workout_data(image_path):
     model = genai.GenerativeModel("gemini-2.0-flash")
     prompt = """
     The task is to extract workout data from the provided image or PDF. The goal is to detect and organize the following information:
-      the image is in complete handwritten form so try to guess and be more accurate
-      also detect some texts that are outside and spill out of the WT and REPS columns since 
-    1. Exercises:
-      - Ignore unnecessary text like personal notes or handwriting that is not part of the structured data.
-      - try to extract the text that is spill out of the box 
-    2. Sets and Reps:
-      - For each exercise, extract the corresponding number of sets and reps. Number each set (e.g., Set 1, Set 2, etc.) to correspond with the weights/reps for each exercise.
-      - Extract the weight (WT) and reps (REPS) values for each set listed next to each exercise.
-      each WT and REPS has always  4 or 5 values not less then and not 3
 
+    1. General Instructions:
+      - The image is in complete handwritten form, so try to guess with higher accuracy.
+      - Try to detect some texts that spill outside the WT and REPS columns.
+      - Avoid unnecessary personal notes or decorative text.
 
-    extract date, muscle group, columns sets
+    2. Data to Extract:
+      - **Date** of the workout (if written on the page).
+      - **Muscle group** targeted in the workout (e.g., Arms, Legs, Chest).
+      - **Exercises** listed on the page.
+
+    3. Sets and Reps:
+      - For each exercise, extract the corresponding number of sets and reps.
+      - Each set includes `weight (WT)` and `reps (REPS)`.
+      - Each exercise usually contains **4 or 5 sets**, so expect at least that many.
 
     4. Output Format:
-      - Return the extracted data in the following JSON format:
-      {
-        "workouts": [
-          {
-            "exercise_name": "Exercise 1",
-            "sets": [
-              {"set_number": 1, "weight": "50kg", "reps": 10},
-              {"set_number": 2, "weight": "55kg", "reps": 8},
-              {"set_number": 3, "weight": "60kg", "reps": 6},
-              {"set_number": 4, "weight": "65kg", "reps": 5},
-              {"set_number": 5, "weight": "70kg", "reps": 4}
-            ]
-          },
-          {
-            "exercise_name": "Exercise 2",
-            "sets": [
-              {"set_number": 1, "weight": "40kg", "reps": 12},
-              {"set_number": 2, "weight": "45kg", "reps": 10}
-            ]
-          }
-        ]
-      }
+    Return the extracted data in this exact JSON format:
 
-    Please extract the relevant workout data without any excessive logic or filtering. Only extract the structured text related to exercises, sets, and reps, and ignore irrelevant information like decorative text or personal notes. 
+    {
+      "date": "MM/DD/YYYY",
+      "muscle_group": "Arms",
+      "workouts": [
+        {
+          "exercise_name": "Exercise 1",
+          "sets": [
+            {"set_number": 1, "weight": "50kg", "reps": 10},
+            {"set_number": 2, "weight": "55kg", "reps": 8},
+            {"set_number": 3, "weight": "60kg", "reps": 6},
+            {"set_number": 4, "weight": "65kg", "reps": 5},
+            {"set_number": 5, "weight": "70kg", "reps": 4}
+          ]
+        },
+        {
+          "exercise_name": "Exercise 2",
+          "sets": [
+            {"set_number": 1, "weight": "40kg", "reps": 12},
+            {"set_number": 2, "weight": "45kg", "reps": 10}
+          ]
+        }
+      ]
+    }
 
+    Please return the result strictly in JSON and extract all relevant information from the image.
     """
     try:
         result = model.generate_content([uploaded_file, prompt])
@@ -79,19 +84,27 @@ def write_to_excel(data, file_index):
     wb = Workbook()
     ws = wb.active
     ws.append(["Date", "Muscle Group", "Exercise", "Set", "Weight", "Reps"])
-    for workout in data['workouts']:
-        for s in workout['sets']:
+    
+    # Safely extract date and muscle_group from the data
+    workout_date = data.get("date", datetime.now().strftime('%m/%d/%Y'))
+    muscle_group = data.get("muscle_group", "Unknown")
+    
+    for workout in data.get('workouts', []):
+        for s in workout.get('sets', []):
             ws.append([
-                datetime.now().strftime('%m/%d/%Y'),
-                "Arms",  # Optional to change later
-                workout['exercise_name'],
-                s['set_number'],
-                s['weight'],
-                s['reps']
+                workout_date,
+                muscle_group,
+                workout.get('exercise_name', 'Unknown'),
+                s.get('set_number', ''),
+                s.get('weight', ''),
+                s.get('reps', '')
             ])
-    path = f"workout_{file_index}.xlsx"
-    wb.save(path)
-    return path
+    
+    excel_path = f"/content/workout_{file_index}.xlsx"
+    wb.save(excel_path)
+    files.download(excel_path)
+    print(f"✅ Downloaded workout_{file_index}.xlsx")
+
 
 # ✅ Streamlit UI
 st.title("🏋️ Workout Data Extractor (Gemini AI)")
