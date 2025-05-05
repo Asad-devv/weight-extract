@@ -9,6 +9,7 @@ from pdf2image import convert_from_bytes
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 import google.generativeai as genai
+from io import BytesIO
 
 # 🔑 Gemini API Key (Secure way for Streamlit sharing)
 genai.configure(api_key="AIzaSyD3T59ddtKIWiGRun31oCbdzba3ibm-He4")  # Or use st.text_input for local testing
@@ -100,9 +101,11 @@ def write_to_excel(data, file_index):
                 s.get('reps', '')
             ])
     
-    excel_path = f"workout_{file_index}.xlsx"
-    wb.save(excel_path)
-    files.download(excel_path)
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
     print(f"✅ Downloaded workout_{file_index}.xlsx")
 
 
