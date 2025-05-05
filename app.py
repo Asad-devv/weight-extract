@@ -101,11 +101,10 @@ def write_to_excel(data, file_index):
                 s.get('reps', '')
             ])
     
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-    return output
 
+    path = f"workout_{file_index}.xlsx"
+    wb.save(path)
+    return path
     print(f"✅ Downloaded workout_{file_index}.xlsx")
 
 
