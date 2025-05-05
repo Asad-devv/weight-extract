@@ -100,14 +100,14 @@ def write_to_excel(data, file_index):
                 s.get('reps', '')
             ])
     
-    excel_path = f"/content/workout_{file_index}.xlsx"
+    excel_path = f"workout_{file_index}.xlsx"
     wb.save(excel_path)
     files.download(excel_path)
     print(f"✅ Downloaded workout_{file_index}.xlsx")
 
 
 # ✅ Streamlit UI
-st.title("🏋️ Workout Data Extractor (Gemini AI)")
+st.title("🏋️ Workout Data Extractor")
 st.markdown("Upload a scanned PDF or an image of a handwritten workout log to extract structured data.")
 
 file_type = st.radio("Select file type:", ["PDF", "Image (JPG/PNG)"])
