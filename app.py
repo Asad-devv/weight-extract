@@ -1,4 +1,5 @@
 import os
+import csv
 import json
 import string
 import streamlit as st
@@ -6,23 +7,21 @@ from datetime import datetime
 from tempfile import mkdtemp
 from PIL import Image
 from pdf2image import convert_from_bytes
-from openpyxl import Workbook
-from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 import google.generativeai as genai
 from io import BytesIO
 
-# 🔑 Gemini API Key (Secure way for Streamlit sharing)
-genai.configure(api_key="AIzaSyD3T59ddtKIWiGRun31oCbdzba3ibm-He4")  # Or use st.text_input for local testing
+# 🔑 Gemini API Key (make sure this is hidden in production)
+genai.configure(api_key="AIzaSyD3T59ddtKIWiGRun31oCbdzba3ibm-He4")
 
 # ✅ Clean output
 def clean_text(text):
-    text = ILLEGAL_CHARACTERS_RE.sub("", text)
     return ''.join(c for c in text if c in string.printable or c.isspace())
 
 # ✅ Extract workout data from image using Gemini
 def detect_workout_data(image_path):
     uploaded_file = genai.upload_file(image_path)
     model = genai.GenerativeModel("gemini-2.0-flash")
+
     prompt = """
     The task is to extract workout data from the provided image or PDF. The goal is to detect and organize the following information:
 
@@ -80,37 +79,32 @@ def detect_workout_data(image_path):
         st.error(f"❌ Parsing error: {e}")
         return {'workouts': []}
 
-# ✅ Excel Writer
-def write_to_excel(data, file_index):
-    wb = Workbook()
-    ws = wb.active
-    ws.append(["Date", "Muscle Group", "Exercise", "Set", "Weight", "Reps"])
-    
-    # Safely extract date and muscle_group from the data
-    workout_date = data.get("date", datetime.now().strftime('%m/%d/%Y'))
-    muscle_group = data.get("muscle_group", "Unknown")
-    
-    for workout in data.get('workouts', []):
-        for s in workout.get('sets', []):
-            ws.append([
-                workout_date,
-                muscle_group,
-                workout.get('exercise_name', 'Unknown'),
-                s.get('set_number', ''),
-                s.get('weight', ''),
-                s.get('reps', '')
-            ])
-    
-
+# ✅ Write CSV using csv library
+def write_to_csv(data, file_index):
     path = f"workout_{file_index}.csv"
-    wb.save(path)
-    return path
-    print(f"✅ Downloaded workout_{file_index}.csv")
+    with open(path, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Date", "Muscle Group", "Exercise", "Set", "Weight", "Reps"])
+        
+        workout_date = data.get("date", datetime.now().strftime('%m/%d/%Y'))
+        muscle_group = data.get("muscle_group", "Unknown")
 
+        for workout in data.get("workouts", []):
+            exercise_name = workout.get("exercise_name", "Unknown")
+            for s in workout.get("sets", []):
+                writer.writerow([
+                    workout_date,
+                    muscle_group,
+                    exercise_name,
+                    s.get("set_number", ""),
+                    s.get("weight", ""),
+                    s.get("reps", "")
+                ])
+    return path
 
 # ✅ Streamlit UI
 st.title("🏋️ Workout Data Extractor")
-st.markdown("Upload a scanned PDF or an image of a handwritten workout log to extract structured data.")
+st.markdown("Upload a scanned PDF or image of a handwritten workout log to extract structured data.")
 
 file_type = st.radio("Select file type:", ["PDF", "Image (JPG/PNG)"])
 
@@ -122,7 +116,7 @@ if st.button("📤 Process"):
     else:
         image_paths = []
 
-        # Process PDF or images
+        # Convert uploaded files to image(s)
         for file in uploaded_files:
             if file_type == "PDF":
                 images = convert_from_bytes(file.read())
@@ -136,15 +130,16 @@ if st.button("📤 Process"):
                 img.save(path)
                 image_paths.append(path)
 
-        # Process each image
+        # Process each image and extract to CSV
         for idx, img_path in enumerate(image_paths):
             st.write(f"🔍 Processing: {os.path.basename(img_path)}")
             data = detect_workout_data(img_path)
-            excel_path = write_to_excel(data, idx + 1)
-            with open(excel_path, "rb") as f:
+            csv_path = write_to_csv(data, idx + 1)
+
+            with open(csv_path, "rb") as f:
                 st.download_button(
                     label=f"📥 Download workout_{idx+1}.csv",
                     data=f,
                     file_name=f"workout_{idx+1}.csv",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    mime="text/csv"
                 )
