@@ -115,6 +115,7 @@ if st.button("📤 Process"):
         st.warning("Please upload at least one file.")
     else:
         image_paths = []
+        all_data = []
 
         # Convert uploaded files to image(s)
         for file in uploaded_files:
@@ -130,16 +131,39 @@ if st.button("📤 Process"):
                 img.save(path)
                 image_paths.append(path)
 
-        # Process each image and extract to CSV
-        for idx, img_path in enumerate(image_paths):
+        # Process each image and accumulate workout data
+        for img_path in image_paths:
             st.write(f"🔍 Processing: {os.path.basename(img_path)}")
             data = detect_workout_data(img_path)
-            csv_path = write_to_csv(data, idx + 1)
+            all_data.append(data)
 
-            with open(csv_path, "rb") as f:
-                st.download_button(
-                    label=f"📥 Download workout_{idx+1}.csv",
-                    data=f,
-                    file_name=f"workout_{idx+1}.csv",
-                    mime="text/csv"
-                )
+        # Combine all data into one CSV
+        combined_csv = "combined_workout.csv"
+        with open(combined_csv, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Date", "Muscle Group", "Exercise", "Set", "Weight", "Reps"])
+
+            for data in all_data:
+                workout_date = data.get("date", datetime.now().strftime('%m/%d/%Y'))
+                muscle_group = data.get("muscle_group", "Unknown")
+
+                for workout in data.get("workouts", []):
+                    exercise_name = workout.get("exercise_name", "Unknown")
+                    for s in workout.get("sets", []):
+                        writer.writerow([
+                            workout_date,
+                            muscle_group,
+                            exercise_name,
+                            s.get("set_number", ""),
+                            s.get("weight", ""),
+                            s.get("reps", "")
+                        ])
+
+        # Show one combined download button
+        with open(combined_csv, "rb") as f:
+            st.download_button(
+                label="📥 Download Combined CSV",
+                data=f,
+                file_name="combined_workout.csv",
+                mime="text/csv"
+            )
