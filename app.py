@@ -102,10 +102,10 @@ def write_to_excel(data, file_index):
             ])
     
 
-    path = f"workout_{file_index}.xlsx"
+    path = f"workout_{file_index}.csv"
     wb.save(path)
     return path
-    print(f"✅ Downloaded workout_{file_index}.xlsx")
+    print(f"✅ Downloaded workout_{file_index}.csv")
 
 
 # ✅ Streamlit UI
@@ -143,8 +143,8 @@ if st.button("📤 Process"):
             excel_path = write_to_excel(data, idx + 1)
             with open(excel_path, "rb") as f:
                 st.download_button(
-                    label=f"📥 Download workout_{idx+1}.xlsx",
+                    label=f"📥 Download workout_{idx+1}.csv",
                     data=f,
-                    file_name=f"workout_{idx+1}.xlsx",
+                    file_name=f"workout_{idx+1}.csv",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
